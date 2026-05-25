@@ -4,22 +4,25 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-static int comparePostingById(const void* a, const void* b) {
-    const PostingEntry* pa = (const PostingEntry*)a;
-    const PostingEntry* pb = (const PostingEntry*)b;
-    return pa->doc_id - pb->doc_id;
-}
+
+#define MAX_TOKENS 256
+
 //пересечение n списков AND-семантика
 Vector* intersectPostings(Vector** lists, int n) {
     if (!lists || n == 0) return NULL;
 
-    Vector* result = createPostingList();
+    Vector* result = createVector(sizeof(SearchResult));
     if (!result) return NULL;
 
     if (n == 1) {
         for (size_t i = 0; i < lists[0]->size; i++) {
             PostingEntry* e = getVectorItem(lists[0], i);
-            appendPosting(result, e->doc_id, e->title);
+            SearchResult sr;
+            sr.doc_id = e->doc_id;
+            strncpy(sr.title, e->title, MAX_TITLE_LEN - 1);
+            sr.title[MAX_TITLE_LEN - 1] = '\0';
+            sr.score = 0;
+            appendVectorItem(result, &sr);
         }
         return result;
     }
@@ -68,9 +71,14 @@ Vector* intersectPostings(Vector** lists, int n) {
             }
         }
 
-        //есть-доьавляем
+        //есть-добавляем
         if (found) {
-            appendPosting(result, entry->doc_id, entry->title);
+            SearchResult sr;
+            sr.doc_id = entry->doc_id;
+            strncpy(sr.title, entry->title, MAX_TITLE_LEN - 1);
+            sr.title[MAX_TITLE_LEN - 1] = '\0';
+            sr.score = 0;
+            appendVectorItem(result, &sr);
         }
     }
 
@@ -134,17 +142,15 @@ SearchResults* search(Index* idx, const char* query) {
         sr->time_ms = ((double)(end - start) / CLOCKS_PER_SEC) * 1000.0;
 
         if (inter && inter->size > 0) {
-            qsort(inter->data, inter->size, inter->elem_size, comparePostingById);
-
             sr->total = (int)inter->size;
 
             //первые 10
             int top = inter->size > 10 ? 10 : (int)inter->size;
-            sr->results = createPostingList();
+            sr->results = createVector(sizeof(SearchResult));
 
             for (int i = 0; i < top; i++) {
-                PostingEntry* e = getVectorItem(inter, i);
-                appendPosting(sr->results, e->doc_id, e->title);
+                SearchResult* e = getVectorItem(inter, i);
+                appendVectorItem(sr->results, e);
             }
 
             vectorFree(inter);
@@ -170,7 +176,7 @@ void printResultsText(const SearchResults* sr) {
 
     if (sr->results && sr->results->size > 0) {
         for (size_t i = 0; i < sr->results->size; i++) {
-            PostingEntry* e = getVectorItem(sr->results, i);
+            SearchResult* e = getVectorItem(sr->results, i);
             printf("%2zu. [id=%d] %s\n", i + 1, e->doc_id, e->title);
         }
     } else {
@@ -188,7 +194,7 @@ void printResultsJSON(const SearchResults* sr) {
 
     if (sr->results) {
         for (size_t i = 0; i < sr->results->size; i++) {
-            PostingEntry* e = getVectorItem(sr->results, i);
+            SearchResult* e = getVectorItem(sr->results, i);
             printf("{\"doc_id\": %d, \"title\": \"%s\"}", e->doc_id, e->title);
             if (i < sr->results->size - 1) printf(",");
             printf("\n");
@@ -204,41 +210,3 @@ void freeSearchResults(SearchResults* sr) {
     if (sr->results) vectorFree(sr->results);
     free(sr);
 }
-
-// Vector* lookupTerm(const Index* idx, const char* term) {
-//     return NULL;
-// }
-
-// int main(void) {
-//     Vector* list1 = createPostingList();
-//     appendPosting(list1, 1, "Doc one");
-//     appendPosting(list1, 2, "Doc two");
-//     appendPosting(list1, 3, "Doc three");
-//     appendPosting(list1, 5, "Doc five");
-
-//     Vector* list2 = createPostingList();
-//     appendPosting(list2, 2, "Doc two");
-//     appendPosting(list2, 3, "Doc three");
-//     appendPosting(list2, 5, "Doc five");
-
-//     Vector* list3 = createPostingList();
-//     appendPosting(list3, 1, "Doc one");
-//     appendPosting(list3, 3, "Doc three");
-//     appendPosting(list3, 5, "Doc five");
-
-//     Vector* lists[] = {list1, list2, list3};
-//     Vector* result = intersectPostings(lists, 3);
-
-//     printf("Intersection result:\n");
-//     for (size_t i = 0; i < result->size; i++) {
-//         PostingEntry* e = getVectorItem(result, i);
-//         printf("  [id=%d] %s\n", e->doc_id, e->title);
-//     }
-
-//     vectorFree(list1);
-//     vectorFree(list2);
-//     vectorFree(list3);
-//     vectorFree(result);
-//     printf("Done.\n");
-//     return 0;
-// }
