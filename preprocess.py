@@ -41,7 +41,7 @@ def preprocess(input_path: Path, output_path: Path, limit: int | None) -> None:
 
     #csv.field_size_limit(sys.maxsize)
 
-    with open(input_path, "r", encoding="utf-8", newline="") as f, \
+    with open(input_path, "r", encoding="utf-8", errors="ignore", newline="") as f, \
          open(output_path, "w", encoding="utf-8") as out:
 
         reader = csv.DictReader(f)

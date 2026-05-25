@@ -1,0 +1,9 @@
+*.o
+
+/data
+
+test_avl
+test_rb
+test_btree
+
+app
