@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../posting.h"
-
+#define MAX_TREE_DEPTH 1000
 typedef struct AVLNode {
     char*           key;
     int             height;

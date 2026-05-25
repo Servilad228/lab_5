@@ -1,7 +1,7 @@
 #pragma once
 
 #include "index.h"
-
+#define MAX_TOKENS 256
 typedef struct {
     int  doc_id;
     char title[MAX_TITLE_LEN];
