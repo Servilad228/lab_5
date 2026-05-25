@@ -22,3 +22,6 @@ void     traverseIndex(
 void     saveIndex(const Index* idx, const char* path);
 Index*   loadIndex(const char* path, TreeType type);
 void     freeIndex(Index* idx);
+void runIndex(TreeType type,
+              const char* data_path,
+              const char* idx_path);
