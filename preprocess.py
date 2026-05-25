@@ -8,41 +8,67 @@
     python preprocess.py --input data/Questions.csv --output data/processed/docs.jsonl
     python preprocess.py --input data/Questions.csv --output data/processed/docs.jsonl --limit 50000
 """
-# Сори если не работает я тестил на mock данных :)
 
 import argparse
 import csv
+import html
 import json
 import re
 import sys
 from pathlib import Path
 
 
+def strip_html(text: str) -> str: # чтобы html-мусор не попадал в индекс
+    text = html.unescape(text)
+    return re.sub(r"<[^>]+>", " ", text)
+
+
 def tokenize(text: str) -> list[str]:
+    text = strip_html(text)
     text = text.lower()
+
+    text = text.replace("++", "pp") # довольно важный контекст
+    text = text.replace("#", "sharp") 
+
     text = re.sub(r"[^\w\s]", " ", text)
-    return [w for w in text.split() if len(w) > 2]
+    return [w for w in text.split() if len(w) > 1] # чтобы не пропали например go, os итд
 
 
 def preprocess(input_path: Path, output_path: Path, limit: int | None) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     count = 0
-    with open(input_path, encoding="utf-8") as f, open(output_path, "w", encoding="utf-8") as out:
+
+    #csv.field_size_limit(sys.maxsize)
+
+    with open(input_path, "r", encoding="utf-8", newline="") as f, \
+         open(output_path, "w", encoding="utf-8") as out:
+
         reader = csv.DictReader(f)
+
         for row in reader:
             if limit is not None and count >= limit:
                 break
 
-            doc_id = row.get("Id", "")
-            title = row.get("Title", "")
-            body = row.get("Body", "")
+            raw_id = row.get("Id", "").strip()
+            title = row.get("Title", "").strip()
+            body = row.get("Body", "").strip()
+
+            if not raw_id:
+                continue
 
             tokens = tokenize(title + " " + body)
+
             if not tokens:
                 continue
 
-            out.write(json.dumps({"doc_id": doc_id, "title": title, "tokens": tokens}) + "\n")
+            doc = {
+                "doc_id": int(raw_id),
+                "title": title,
+                "tokens": tokens
+            }
+
+            out.write(json.dumps(doc, ensure_ascii=False) + "\n")
             count += 1
 
             if count % 10_000 == 0:
